@@ -71,6 +71,7 @@ namespace AntMe.Player.DHBW
         }
 
         #endregion
+
         #region FlockingBoids
 
         private int rule1(int ID)
@@ -174,6 +175,7 @@ namespace AntMe.Player.DHBW
 
 
         #endregion
+
         #region Movement
 
         /// <summary>
@@ -183,18 +185,20 @@ namespace AntMe.Player.DHBW
         {
 
 
-
-
-            if (Ant_ID == 1)
+            if (CurrentLoad == 0)
             {
-                GoAhead(10);
-            }
-            else
-            {
-                TurnToDirection(boidUpdate(this.getID()));
-                GoAhead(10);
-                // nach 10 Schritten versucht die Ameise erneut, sie an die Boid Theorie zu halten
-                // mit diesem Wert lässt sich noch herumexperimentieren
+
+                if (Ant_ID == 1)
+                {
+                    GoAhead(10);
+                }
+                else
+                {
+                    TurnToDirection(boidUpdate(this.getID()));
+                    GoAhead(10);
+                    // nach 10 Schritten versucht die Ameise erneut, sie an die Boid Theorie zu halten
+                    // mit diesem Wert lässt sich noch herumexperimentieren
+                }
             }
         }
 		
@@ -204,6 +208,8 @@ namespace AntMe.Player.DHBW
 		/// </summary>
 		public override void BecomesTired()
 		{
+            if (CurrentLoad == 0){
+            GoBackToAnthill();}
 		}
 
 		#endregion
@@ -215,7 +221,11 @@ namespace AntMe.Player.DHBW
 		/// </summary>
         /// <param name="sugar">Nearest sugar pile</param>
         public override void Spots(Sugar sugar)
-		{
+        {
+            if (CurrentLoad == 0)
+            {
+                GoToTarget(sugar);
+            }
 		}
 
 		/// <summary>
@@ -224,6 +234,11 @@ namespace AntMe.Player.DHBW
         /// <param name="fruit">Nearest fruit</param>
 		public override void Spots(Fruit fruit)
 		{
+            if (CurrentLoad == 0)
+            {
+                //MakeMark(0, 100);
+                GoToTarget(fruit);
+            }
 		}
 
 		/// <summary>
@@ -231,7 +246,9 @@ namespace AntMe.Player.DHBW
 		/// </summary>
         /// <param name="sugar">Sugar pile</param>
         public override void TargetReached(Sugar sugar)
-		{
+        {
+            Take(sugar);
+            GoBackToAnthill();
 		}
 
 		/// <summary>
@@ -240,6 +257,14 @@ namespace AntMe.Player.DHBW
         /// <param name="fruit">Fruit</param>
         public override void TargetReached(Fruit fruit)
 		{
+                MakeMark(0, 100);
+            if (NeedsCarrier(fruit))
+            {
+                Take(fruit);
+                GoBackToAnthill();
+            }
+            
+
 		}
 
 		#endregion
@@ -252,7 +277,20 @@ namespace AntMe.Player.DHBW
 		/// </summary>
         /// <param name="marker">Next new marker</param>
 		public override void SmellsFriend(Marker marker)
-		{
+        {
+            if (CurrentLoad == 0)
+            {
+                if (marker.Information == 0)
+                {
+                    GoToTarget(marker);
+                }
+                else
+                {
+                    //TurnToDirection(marker.Information);
+                    //GoAhead(20);
+                    GoToTarget(marker);
+                }
+            }
 		}
 
 		/// <summary>
@@ -280,7 +318,16 @@ namespace AntMe.Player.DHBW
 		/// </summary>
         /// <param name="bug">Nearest bug</param>
         public override void SpotsEnemy(Bug bug)
-		{
+        {
+            if (FriendlyAntsFromSameCasteInViewrange < 20)
+            {
+                GoToTarget(bug);
+            }
+            else
+            {
+                GoAwayFromTarget(bug);
+            } 
+            //GoAwayFromTarget(bug);
 		}
 
 		/// <summary>
@@ -296,7 +343,8 @@ namespace AntMe.Player.DHBW
 		/// </summary>
         /// <param name="bug">Attacking bug</param>
         public override void UnderAttack(Bug bug)
-		{
+        {
+            Attack(bug);
 		}
 
 		/// <summary>
@@ -305,6 +353,7 @@ namespace AntMe.Player.DHBW
 		/// <param name="ant">Attacking enemy ant</param>
         public override void UnderAttack(Ant ant)
 		{
+           
 		}
 
 		#endregion
@@ -324,6 +373,11 @@ namespace AntMe.Player.DHBW
 		/// </summary>
 		public override void Tick()
 		{
+           /* if (CurrentLoad > 0 && Target != null)
+            {
+                MakeMark(Direction + 180, 5);
+                //MakeMark(1, 5);
+            }*/
 		}
 
 		#endregion
