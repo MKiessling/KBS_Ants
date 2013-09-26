@@ -27,15 +27,29 @@ namespace AntMe.Player.DHBW
         RotationSpeedModificator = 0
     )]
 
+    [Caste(
+        Name = "SugarAnt",
+        SpeedModificator = 2,
+        LoadModificator = -1,
+        AttackModificator = -1,
+        EnergyModificator = -1,
+        RangeModificator = 1,
+        ViewRangeModificator = 1,
+        RotationSpeedModificator = -1
+    )]
+
     
 
 	public class DHBWAnt : BaseAnt
 	{
 
         // Liste in die alle Ameisen eingetragen werden
-        private List<DHBWAnt> Antlist = new List<DHBWAnt>();
+        private static List<DHBWAnt> Antlist = new List<DHBWAnt>();
+        // Liste in die alle Zuckerhaufen eingetragen werden
+        private Sugar CurrentSugar;
         // jede Ameise erhält eine eigene ID
         private int AntID;
+        private bool hasSugarTarget = false;
 
         #region FlockingBoids
 
@@ -102,8 +116,8 @@ namespace AntMe.Player.DHBW
         private int BoidUpdate(int AntID)
         {
             int R1 = Rule1(AntID);
-            int R2 = Rule1(AntID);
-            int R3 = Rule1(AntID);
+            int R2 = Rule2(AntID);
+            int R3 = Rule3(AntID);
             int Weight1 = 60;
             int Weight2 = 30;
             int Weigth3 = 10;
@@ -144,8 +158,8 @@ namespace AntMe.Player.DHBW
                 this.AntID = ListSize + 1;
                 Antlist.Add(this);
             }
-            
-            return "Default";
+            System.Diagnostics.Debug.WriteLine(this.getID());
+            return "SugarAnt";
         }
 
         #endregion
@@ -159,22 +173,10 @@ namespace AntMe.Player.DHBW
 		/// </summary>
         public override void Waits()
         {
-
-            if (CurrentLoad == 0)
+            if (CurrentLoad == 0 && !hasSugarTarget)
             {
-
-                if (AntID == 1)
-                {
-                    GoAhead(10);
-                }
-                else
-                {
-                    // nach 10 Schritten versucht die Ameise erneut, sie an die Boid Theorie zu halten
-                    // mit diesem Wert lässt sich noch herumexperimentieren
-                    TurnToDirection(BoidUpdate(this.getID()));
-                    GoAhead(10);
-                    
-                }
+                TurnToDirection(BoidUpdate(this.getID()));
+                GoAhead(20);
             }
         }
 		
@@ -198,9 +200,18 @@ namespace AntMe.Player.DHBW
         /// <param name="sugar">Nearest sugar pile</param>
         public override void Spots(Sugar sugar)
         {
+            if (CurrentSugar != sugar) CurrentSugar = sugar;
+            hasSugarTarget = true;
             if (CurrentLoad == 0)
             {
-                GoToTarget(sugar);
+                int Direction, Distance;
+                Direction = Coordinate.GetDegreesBetween(this, sugar);
+                Distance = Coordinate.GetDistanceBetween(this, sugar);
+                MakeMark(Direction, Distance);
+                if (CurrentLoad == 0)
+                {
+                    GoToTarget(sugar);
+                }
             }
 		}
 
@@ -212,8 +223,14 @@ namespace AntMe.Player.DHBW
 		{
             if (CurrentLoad == 0)
             {
-                //MakeMark(0, 100);
-                GoToTarget(fruit);
+                int Direction, Distance;
+                Direction = Coordinate.GetDegreesBetween(this, fruit);
+                Distance = Coordinate.GetDistanceBetween(this, fruit);
+                MakeMark(Direction, Distance);
+                if (CurrentLoad == 0)
+                {
+                    GoToTarget(fruit);
+                }
             }
 		}
 
@@ -233,7 +250,7 @@ namespace AntMe.Player.DHBW
         /// <param name="fruit">Fruit</param>
         public override void TargetReached(Fruit fruit)
 		{
-                MakeMark(0, 100);
+            MakeMark(0, 100);
             if (NeedsCarrier(fruit))
             {
                 Take(fruit);
@@ -254,18 +271,10 @@ namespace AntMe.Player.DHBW
         /// <param name="marker">Next new marker</param>
 		public override void SmellsFriend(Marker marker)
         {
-            if (CurrentLoad == 0)
+            if (Target == null && !hasSugarTarget)
             {
-                if (marker.Information == 0)
-                {
-                    GoToTarget(marker);
-                }
-                else
-                {
-                    //TurnToDirection(marker.Information);
-                    //GoAhead(20);
-                    GoToTarget(marker);
-                }
+                TurnToDirection(marker.Information);
+                GoAhead();
             }
 		}
 
@@ -275,6 +284,10 @@ namespace AntMe.Player.DHBW
 		/// <param name="ant">Nearest friendly ant</param>
 		public override void SpotsFriend(Ant ant)
 		{
+            if(!(Target is Anthill) && CurrentLoad != 0 && !hasSugarTarget){
+                TurnToDirection(ant.Direction);
+                GoAhead();
+            }
 		}
 
 		/// <summary>
@@ -295,15 +308,33 @@ namespace AntMe.Player.DHBW
         /// <param name="bug">Nearest bug</param>
         public override void SpotsEnemy(Bug bug)
         {
-            if (FriendlyAntsFromSameCasteInViewrange < 20)
+            switch (Caste)
             {
-                GoToTarget(bug);
+                case "SugarAnt":
+                    if (!(Target is Anthill) && !hasSugarTarget)
+                    {
+                        GoAwayFromTarget(bug);
+                    }
+                    break;
+                case "KillerAnt":
+                    if (FriendlyAntsFromSameCasteInViewrange > 10)
+                    {
+                        if (CurrentLoad == 0)
+                        {
+                            int Direction, Distance;
+                            Direction = Coordinate.GetDegreesBetween(this, bug);
+                            Distance = Coordinate.GetDistanceBetween(this, bug);
+                            MakeMark(Direction, Distance);
+                            Attack(bug);
+                        }
+                    }
+                    else
+                    {
+                        GoAwayFromTarget(bug);
+                    }
+                    break;
+
             }
-            else
-            {
-                GoAwayFromTarget(bug);
-            } 
-            //GoAwayFromTarget(bug);
 		}
 
 		/// <summary>
@@ -320,7 +351,13 @@ namespace AntMe.Player.DHBW
         /// <param name="bug">Attacking bug</param>
         public override void UnderAttack(Bug bug)
         {
-            Attack(bug);
+            switch (Caste)
+            {
+                case "SugarAnt":
+                    Drop();
+                    GoAwayFromTarget(bug);
+                    break;
+            }
 		}
 
 		/// <summary>
@@ -349,11 +386,19 @@ namespace AntMe.Player.DHBW
 		/// </summary>
 		public override void Tick()
 		{
-           /* if (CurrentLoad > 0 && Target != null)
+            if (hasSugarTarget && CurrentSugar.Amount == 0)
             {
-                MakeMark(Direction + 180, 5);
-                //MakeMark(1, 5);
-            }*/
+                CurrentSugar = null;
+                hasSugarTarget = false;
+            }
+           if (CurrentLoad > 0 && Target is Anthill && CarringFruit == null)
+            {
+                MakeMark(Direction + 180);
+            }
+           if (CurrentLoad == 0 && !(Target is Anthill) && hasSugarTarget)
+           {
+               GoToTarget(CurrentSugar);
+           }
 		}
 
 		#endregion
