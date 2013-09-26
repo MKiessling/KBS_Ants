@@ -102,8 +102,8 @@ namespace AntMe.Player.DHBW
         private int BoidUpdate(int AntID)
         {
             int R1 = Rule1(AntID);
-            int R2 = Rule1(AntID);
-            int R3 = Rule1(AntID);
+            int R2 = Rule2(AntID);
+            int R3 = Rule3(AntID);
             int Weight1 = 60;
             int Weight2 = 30;
             int Weigth3 = 10;
