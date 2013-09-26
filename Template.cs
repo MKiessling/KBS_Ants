@@ -1,7 +1,6 @@
+using AntMe.English;
 using System;
 using System.Collections.Generic;
-
-using AntMe.English;
 
 namespace AntMe.Player.DHBW
 {
@@ -33,48 +32,14 @@ namespace AntMe.Player.DHBW
 	public class DHBWAnt : BaseAnt
 	{
 
-        #region Castes
-        private static LinkedList<DHBWAnt> Antlist;
         // Liste in die alle Ameisen eingetragen werden
-        private int Ant_ID;
+        private List<DHBWAnt> Antlist = new List<DHBWAnt>();
         // jede Ameise erhält eine eigene ID
-
-        public int getID()
-        {
-            return Ant_ID;
-        }
-        /// <summary>
-        /// Chooses a specific caste.
-        /// </summary>
-        /// <param name="typeCount">List of available ants from caste</param>
-        /// <returns>Name of chosen caste</returns>
-        public override string ChooseType(Dictionary<string, int> typeCount)
-        {
-
-         
-
-            if (Antlist == null)
-            {
-                Antlist = new LinkedList<DHBWAnt>();
-                Ant_ID = 1;
-                Antlist.AddLast(this);
-                // 1. Ameise wird erstellt
-            }
-            else
-            {
-                Ant_ID = Antlist.Last.Value.getID() + 1;
-                Antlist.AddLast(this);
-                //weitere Ameisen werden erstellt
-            }
-            
-            return "Default";
-        }
-
-        #endregion
+        private int AntID;
 
         #region FlockingBoids
 
-        private int rule1(int ID)
+        private int Rule1(int AntID)
         {
 
             // Für alle Ameisen die sich in Reichweite befinden wird Festgestellt, 
@@ -82,99 +47,110 @@ namespace AntMe.Player.DHBW
             // die Ameise versucht genau in die Gegenrichtung zu laufen
             // dieser Wert wird für alle Ameisen berechnet und ein Mittelwert zurückgegeben
 
-
-            LinkedList<DHBWAnt> copy = new LinkedList<DHBWAnt>();
-            int degreeSum = 0;
-            int antSum = 0;
-            
-            while (Antlist.Count > 0)
+            int DegreeSum = 0;
+            foreach (DHBWAnt Ant in Antlist)
             {
-                if (Antlist.First.Value.Ant_ID != this.getID() && (Coordinate.GetDistanceBetween(this, Antlist.First.Value) < 40))
+                int Distance = Coordinate.GetDistanceBetween(this, Ant);
+                if (Ant.getID() != AntID && (Distance < 40))
                 {
-                    degreeSum = degreeSum + (Coordinate.GetDegreesBetween(this, Antlist.First.Value) - 180);
-                    antSum++;
+                    DegreeSum += (Distance - 180);
                 }
-                copy.AddLast(Antlist.First.Value);
-                Antlist.RemoveFirst();
             }
-            if (antSum == 0) { antSum = 1; }
-            Antlist = copy;
-            if (degreeSum == 0)
+            if (DegreeSum == 0)
             {
-                // es kann vorkommen das keine Ameisen in der nähe sind, dann sollte hier ein Zufallswert stehen
-                degreeSum = 180; 
+                DegreeSum = new Random().Next(0, 180);
             }
-            return degreeSum / antSum;
+            int ListSize = Antlist.Count;
+            return ListSize != 0 ? DegreeSum / Antlist.Count : DegreeSum / 1;
         }
 
-        private int rule2(int ID)
+        private int Rule2(int AntID)
         {
             // Es wird der Mittelwert aus der Bewegunsrichtung aller Ameisen gebildet
-            
-            LinkedList<DHBWAnt> copy = new LinkedList<DHBWAnt>();
-            int directionSum = 0;
-            int antSum = 0;
 
-            while (Antlist.Count > 0)
+            int DirectionSum = 0;
+            foreach (DHBWAnt Ant in Antlist)
             {
-                if (Antlist.First.Value.Ant_ID != this.getID())
+                if (Ant.getID() != AntID)
                 {
-                    directionSum = directionSum + Antlist.First.Value.Direction;
-                    antSum++;
+                    DirectionSum += Ant.Direction;
                 }
-                copy.AddLast(Antlist.First.Value);
-                Antlist.RemoveFirst();
             }
-            if (antSum == 0) { antSum = 1; }
-            Antlist = copy;
-
-            return directionSum / antSum;
+            int ListSize = Antlist.Count;
+            return ListSize != 0 ? DirectionSum / Antlist.Count : DirectionSum / 1;
         }
 
-        private int rule3(int ID)
+        private int Rule3(int AntID)
         {
-
-            // Es wird ein Mittelwert aus den Positionene aller Ameisen gebildet
-            LinkedList<DHBWAnt> copy = new LinkedList<DHBWAnt>();
-            int positionSum = 0;
-            int antSum = 0;
-
-            while (Antlist.Count > 0)
+            int PositionSum = 0;
+            foreach (DHBWAnt Ant in Antlist)
             {
-                if (Antlist.First.Value.Ant_ID != this.getID())
+                int DegreesBetween = Coordinate.GetDegreesBetween(this, Ant);
+                if (Ant.getID() != AntID)
                 {
-                    positionSum = positionSum + (Coordinate.GetDegreesBetween(this, Antlist.First.Value));
-                    antSum++;
+                    PositionSum += DegreesBetween;
                 }
-                copy.AddLast(Antlist.First.Value);
-                Antlist.RemoveFirst();
             }
-            if (antSum == 0) { antSum = 1; }
-            Antlist = copy;
-            if (positionSum == 0)
+            if (PositionSum == 0)
             {
-                positionSum = 180;
+                PositionSum = 180;
             }
-            return positionSum / antSum;
+            int ListSize = Antlist.Count;
+            return ListSize != 0 ? PositionSum / Antlist.Count : PositionSum / 1;
         }
 
-        private int boidUpdate(int ID)
+        private int BoidUpdate(int AntID)
         {
-            int r1 = rule1(ID);
-            int r2 = rule1(ID);
-            int r3 = rule1(ID);
-            int weight1 = 60;
-            int weight2 = 30;
-            int weigth3 = 10;
+            int R1 = Rule1(AntID);
+            int R2 = Rule1(AntID);
+            int R3 = Rule1(AntID);
+            int Weight1 = 60;
+            int Weight2 = 30;
+            int Weigth3 = 10;
 
             // die einzelnen Regeln können unterschiedlich gewichtet werden
 
-            return (r1 * weight1 + r2 * weight2 + r3 * weigth3) / (weight1+weight2+weigth3);
+            return (R1 * Weight1 + R2 * Weight2 + R3 * Weigth3) / (Weight1 + Weight2 + Weigth3);
 
         }
 
+        #endregion
+
+        public int getID()
+        {
+            return this.AntID;
+        }
+
+        #region Castes
+        
+        /// <summary>
+        /// Chooses a specific caste.
+        /// </summary>
+        /// <param name="typeCount">List of available ants from caste</param>
+        /// <returns>Name of chosen caste</returns>
+        public override string ChooseType(Dictionary<string, int> typeCount)
+        {
+            int ListSize = Antlist.Count;
+            if (ListSize == 0)
+            {
+                // 1. Ameise wird erstellt
+                Antlist = new List<DHBWAnt>();
+                this.AntID = 1;
+                Antlist.Add(this);
+            }
+            else
+            {
+                //weitere Ameisen werden erstellt
+                this.AntID = ListSize + 1;
+                Antlist.Add(this);
+            }
+            
+            return "Default";
+        }
 
         #endregion
+
+       
 
         #region Movement
 
@@ -184,20 +160,20 @@ namespace AntMe.Player.DHBW
         public override void Waits()
         {
 
-
             if (CurrentLoad == 0)
             {
 
-                if (Ant_ID == 1)
+                if (AntID == 1)
                 {
                     GoAhead(10);
                 }
                 else
                 {
-                    TurnToDirection(boidUpdate(this.getID()));
-                    GoAhead(10);
                     // nach 10 Schritten versucht die Ameise erneut, sie an die Boid Theorie zu halten
                     // mit diesem Wert lässt sich noch herumexperimentieren
+                    TurnToDirection(BoidUpdate(this.getID()));
+                    GoAhead(10);
+                    
                 }
             }
         }
